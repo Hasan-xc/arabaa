@@ -1,0 +1,338 @@
+:root {
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --light-bg: #f8f9fa;
+    --dark-bg: #e9ecef;
+    --text-color: #333;
+    --border-color: #dee2e6;
+    --active-bg: #d1ecf1;
+    --context-selected-bg: #ffeeba;
+    --active-border: #0d6efd;
+    --danger-color: #dc3545;
+    --menu-bg: #ffffff;
+    --menu-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+body {
+    font-family: 'Cairo', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--light-bg);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.main-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 1010;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.5em;
+}
+
+.controls {
+    background-color: var(--dark-bg);
+    padding: 15px;
+    margin: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.controls label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.controls input[type="file"] {
+    display: block;
+    width: calc(100% - 12px);
+    padding: 6px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: white;
+}
+
+.export-section {
+    background-color: var(--dark-bg);
+    padding: 15px;
+    margin: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.content-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    padding: 0 15px 15px 15px;
+    gap: 0;
+}
+
+.video-area-sticky {
+    position: sticky;
+    top: 50px;
+    z-index: 1000;
+    background-color: var(--dark-bg);
+    padding: 10px;
+    margin: 0 -15px 10px -15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.video-player-container {
+    position: relative;
+    margin-bottom: 10px;
+}
+
+video {
+    display: block;
+    width: 100%;
+    border-radius: 8px;
+    background-color: #000;
+    max-height: 50vh;
+}
+
+video::cue {
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-family: 'Cairo', sans-serif;
+    font-size: 1.1em;
+}
+
+.video-seek-controls {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding: 5px 0;
+}
+
+.video-seek-controls button {
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 1.2em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.video-seek-controls button:hover:not(:disabled) {
+    background-color: #5a6268;
+}
+
+.video-seek-controls button:disabled {
+    background-color: #adb5bd;
+    cursor: not-allowed;
+}
+
+.subtitle-section {
+    overflow-y: visible;
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    margin-top: 10px;
+}
+
+.subtitle-section .placeholder-text {
+     text-align: center;
+     color: var(--secondary-color);
+     padding: 20px;
+}
+
+.subtitle-item {
+     border: 1px solid var(--border-color);
+     margin-bottom: 12px;
+     padding: 10px 12px;
+     border-radius: 6px;
+     background-color: #fff;
+     transition: background-color 0.2s ease, border-color 0.2s ease;
+     cursor: pointer;
+     position: relative;
+     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.subtitle-item.active {
+    background-color: var(--active-bg);
+    border-left: 5px solid var(--active-border);
+    font-weight: bold;
+}
+
+.subtitle-item.context-selected {
+    background-color: var(--context-selected-bg);
+    border-color: #ffda6a;
+}
+
+.subtitle-item textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 45px;
+    margin-top: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 8px;
+    resize: vertical;
+    font-size: 0.95em;
+    line-height: 1.5;
+    background-color: #fcfcfc;
+    cursor: text;
+}
+
+.time-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 0.9em;
+    direction: ltr;
+    gap: 5px;
+}
+
+.time-controls input[type="text"] {
+    flex-grow: 1;
+    max-width: 110px;
+    padding: 5px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.95em;
+}
+
+.time-controls input[type="text"].error {
+    border-color: var(--danger-color);
+    background-color: #fdd;
+}
+
+.time-controls button {
+    padding: 4px 8px;
+    font-size: 0.85em;
+    cursor: pointer;
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.time-controls button:hover {
+    background-color: #5a6268;
+}
+
+.time-separator {
+    color: var(--secondary-color);
+    font-weight: bold;
+    margin: 0 5px;
+}
+
+#contextMenu {
+    position: absolute;
+    display: none;
+    background-color: var(--menu-bg);
+    border-radius: 6px;
+    box-shadow: var(--menu-shadow);
+    padding: 8px 0;
+    z-index: 1100;
+    min-width: 150px;
+}
+
+#contextMenu button {
+    display: block;
+    width: 100%;
+    padding: 10px 15px;
+    border: none;
+    background: none;
+    text-align: right;
+    cursor: pointer;
+    font-size: 0.95em;
+    color: var(--text-color);
+}
+
+#contextMenu button:hover {
+    background-color: var(--dark-bg);
+}
+
+#contextMenu button.delete {
+    color: var(--danger-color);
+}
+
+#contextMenu hr {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 5px 0;
+}
+
+#exportSrtButton {
+    padding: 10px 25px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+#exportSrtButton:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+#exportSrtButton:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+#exportSrtButton:disabled {
+    background-color: #adb5bd;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 1.3em;
+    }
+    .video-area-sticky {
+        top: 47px;
+    }
+    video::cue {
+        font-size: 1em;
+    }
+    .video-seek-controls button {
+        width: 45px;
+        height: 45px;
+        font-size: 1.3em;
+    }
+    .time-controls input[type="text"] {
+        max-width: 100px;
+    }
+    .time-controls button {
+        padding: 5px 10px;
+    }
+    #exportSrtButton {
+        width: 80%;
+        padding: 12px 20px;
+    }
+}

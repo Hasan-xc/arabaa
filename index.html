@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>محرر ترجمة الفيديو (مع عرض مباشر)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="main-container">
+        <header>
+            <h1>محرر ترجمة الفيديو</h1>
+        </header>
+
+        <div class="controls">
+            <label for="videoFile">اختر الفيديو:</label>
+            <input type="file" id="videoFile" accept="video/*">
+
+            <label for="srtFile">اختر ملف SRT:</label>
+            <input type="file" id="srtFile" accept=".srt">
+        </div>
+
+        <div class="content-wrapper">
+            <div class="video-area-sticky">
+                <div class="video-player-container">
+                    <video id="videoPlayer" controls controlsList="nodownload" crossorigin="anonymous">
+                        <!-- سيتم إضافة عنصر Track هنا بواسطة JavaScript -->
+                    </video>
+                </div>
+                <div class="video-seek-controls">
+                    <button id="seekBackward" title="ترجيع 5 ثوان" disabled>-5</button>
+                    <button id="seekForward" title="تقديم 5 ثوان" disabled>+5</button>
+                </div>
+            </div>
+
+            <div class="subtitle-section" id="subtitleEditor">
+                <p class="placeholder-text" id="editorPlaceholder">قم بتحميل الفيديو وملف SRT للبدء...</p>
+            </div>
+        </div>
+
+        <div class="export-section">
+            <button id="exportSrtButton" disabled>تصدير ملف SRT المعدل</button>
+        </div>
+    </div>
+
+    <!-- قائمة السياق (مخفية مبدئيًا) -->
+    <div id="contextMenu">
+        <button id="cmAddAbove">إضافة سطر قبل هذا</button>
+        <button id="cmAddBelow">إضافة سطر بعد هذا</button>
+        <hr>
+        <button id="cmDelete" class="delete">حذف هذا السطر</button>
+    </div>
+
+    <script src="script.js" defer></script>
+
+</body>
+</html>
