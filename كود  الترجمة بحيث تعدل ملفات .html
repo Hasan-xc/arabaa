@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>محرر ترجمة الفيديو (مع عرض مباشر)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --light-bg: #f8f9fa;
+            --dark-bg: #e9ecef;
+            --text-color: #333;
+            --border-color: #dee2e6;
+            --active-bg: #d1ecf1; /* تمييز السطر النشط في القائمة */
+            --context-selected-bg: #ffeeba; /* تمييز العنصر المحدد للقائمة */
+            --active-border: #0d6efd;
+            --danger-color: #dc3545;
+            --menu-bg: #ffffff;
+            --menu-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        /* ... (ستايلات body, main-container, header, controls - كما هي) ... */
+        body { font-family: 'Cairo', sans-serif; margin: 0; padding: 0; background-color: var(--light-bg); color: var(--text-color); line-height: 1.6; }
+        .main-container { display: flex; flex-direction: column; min-height: 100vh; }
+        header { background-color: var(--primary-color); color: white; padding: 10px 20px; text-align: center; position: sticky; top: 0; z-index: 1010; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        header h1 { margin: 0; font-size: 1.5em; }
+        .controls { background-color: var(--dark-bg); padding: 15px; margin: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .controls label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .controls input[type="file"] { display: block; width: calc(100% - 12px); padding: 6px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 4px; background-color: white; }
+        .export-section { background-color: var(--dark-bg); padding: 15px; margin: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; }
+
+
+        .content-wrapper { display: flex; flex-direction: column; flex-grow: 1; padding: 0 15px 15px 15px; gap: 0; }
+        .video-area-sticky { position: sticky; top: 50px; /* تحت الهيدر */ z-index: 1000; background-color: var(--dark-bg); padding: 10px; margin: 0 -15px 10px -15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-bottom: 1px solid var(--border-color); }
+        .video-player-container { position: relative; margin-bottom: 10px; }
+        video { display: block; width: 100%; border-radius: 8px; background-color: #000; max-height: 50vh; }
+        /* --- Styling for Native Video Subtitles (::cue) --- */
+        video::cue {
+            background-color: rgba(0, 0, 0, 0.7); /* خلفية شبه شفافة */
+            color: white;
+            font-family: 'Cairo', sans-serif; /* استخدام نفس الخط */
+            font-size: 1.1em; /* حجم أكبر قليلاً */
+            /* يمكنك إضافة المزيد من الخصائص مثل text-shadow, padding, etc. */
+             /* لتحديد الموضع الرأسي (0% أعلى, 100% أسفل) */
+            /* line: 90%; */
+        }
+
+        .video-seek-controls { display: flex; justify-content: center; gap: 20px; padding: 5px 0; }
+        .video-seek-controls button { background-color: var(--secondary-color); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 1.2em; font-weight: bold; cursor: pointer; transition: background-color 0.2s ease; display: flex; align-items: center; justify-content: center; line-height: 1; }
+        .video-seek-controls button:hover:not(:disabled) { background-color: #5a6268; }
+        .video-seek-controls button:disabled { background-color: #adb5bd; cursor: not-allowed; }
+
+
+        .subtitle-section { overflow-y: visible; background-color: transparent; border: none; padding: 0; margin-top: 10px; }
+
+        .subtitle-item {
+             border: 1px solid var(--border-color); margin-bottom: 12px; padding: 10px 12px; border-radius: 6px; background-color: #fff; transition: background-color 0.2s ease, border-color 0.2s ease; cursor: pointer; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .subtitle-item.active { /* السطر المتزامن مع الفيديو */
+            background-color: var(--active-bg);
+            border-left: 5px solid var(--active-border);
+            font-weight: bold;
+        }
+         /* *** ستايل جديد للعنصر المحدد للقائمة *** */
+        .subtitle-item.context-selected {
+            background-color: var(--context-selected-bg); /* لون التحديد للقائمة */
+            border-color: #ffda6a; /* تغيير لون الحدود أيضًا */
+        }
+
+        /* ... (ستايلات textarea, time-controls - كما هي) ... */
+        .subtitle-item textarea { width: 100%; box-sizing: border-box; min-height: 45px; margin-top: 8px; border: 1px solid var(--border-color); border-radius: 4px; padding: 8px; resize: vertical; font-size: 0.95em; line-height: 1.5; background-color: #fcfcfc; cursor: text; }
+        .time-controls { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.9em; direction: ltr; gap: 5px; }
+        .time-controls input[type="text"] { flex-grow: 1; max-width: 110px; padding: 5px; border: 1px solid var(--border-color); border-radius: 4px; text-align: center; font-size: 0.95em; }
+        .time-controls input[type="text"].error { border-color: var(--danger-color); background-color: #fdd; }
+        .time-controls button { padding: 4px 8px; font-size: 0.85em; cursor: pointer; background-color: var(--secondary-color); color: white; border: none; border-radius: 4px; transition: background-color 0.2s ease; }
+        .time-controls button:hover { background-color: #5a6268; }
+        .time-separator { color: var(--secondary-color); font-weight: bold; margin: 0 5px; }
+
+
+        /* قائمة السياق (الضغط المطول/اليمين) */
+        #contextMenu {
+            position: absolute; display: none; background-color: var(--menu-bg); border-radius: 6px; box-shadow: var(--menu-shadow); padding: 8px 0; z-index: 1100; min-width: 150px;
+        }
+        #contextMenu button { display: block; width: 100%; padding: 10px 15px; border: none; background: none; text-align: right; cursor: pointer; font-size: 0.95em; color: var(--text-color); }
+        #contextMenu button:hover { background-color: var(--dark-bg); }
+        #contextMenu button.delete { color: var(--danger-color); }
+        #contextMenu hr { border: none; border-top: 1px solid var(--border-color); margin: 5px 0; }
+
+        /* ... (ستايلات زر التصدير و Media Query - كما هي مع تعديل top للفيديو) ... */
+        #exportSrtButton { padding: 10px 25px; font-size: 1em; font-weight: bold; cursor: pointer; background-color: var(--primary-color); color: white; border: none; border-radius: 5px; transition: background-color 0.2s ease, transform 0.1s ease; }
+        #exportSrtButton:hover:not(:disabled) { background-color: #0056b3; }
+        #exportSrtButton:active:not(:disabled) { transform: scale(0.98); }
+        #exportSrtButton:disabled { background-color: #adb5bd; cursor: not-allowed; }
+
+        @media (max-width: 768px) {
+            header h1 { font-size: 1.3em; }
+            .video-area-sticky { top: 47px; /* قيمة تقريبية لارتفاع الهيدر على الموبايل */ }
+            video::cue { font-size: 1em; /* تعديل حجم الخط للهاتف */ }
+            .video-seek-controls button { width: 45px; height: 45px; font-size: 1.3em; }
+            .time-controls input[type="text"] { max-width: 100px; }
+            .time-controls button { padding: 5px 10px; }
+            #exportSrtButton { width: 80%; padding: 12px 20px; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <header>
+            <h1>محرر ترجمة الفيديو</h1>
+        </header>
+
+        <div class="controls">
+            <label for="videoFile">اختر الفيديو:</label>
+            <input type="file" id="videoFile" accept="video/*">
+
+            <label for="srtFile">اختر ملف SRT:</label>
+            <input type="file" id="srtFile" accept=".srt">
+        </div>
+
+        <div class="content-wrapper">
+            <div class="video-area-sticky">
+                <div class="video-player-container">
+                    <video id="videoPlayer" controls controlsList="nodownload" crossorigin="anonymous">
+                        <!-- عنصر Track سيُضاف هنا بواسطة JavaScript -->
+                    </video>
+                </div>
+                <div class="video-seek-controls">
+                    <button id="seekBackward" title="ترجيع 5 ثوان">-5</button>
+                    <button id="seekForward" title="تقديم 5 ثوان">+5</button>
+                </div>
+            </div>
+
+            <div class="subtitle-section" id="subtitleEditor">
+                <p style="text-align: center; color: var(--secondary-color);">قم بتحميل الفيديو وملف SRT للبدء...</p>
+            </div>
+        </div>
+
+        <div class="export-section">
+            <button id="exportSrtButton" disabled>تصدير ملف SRT المعدل</button>
+        </div>
+    </div>
+
+    <!-- قائمة السياق (مخفية مبدئيًا) -->
+    <div id="contextMenu">
+        <button id="cmAddAbove">إضافة سطر قبل هذا</button>
+        <button id="cmAddBelow">إضافة سطر بعد هذا</button>
+        <hr>
+        <button id="cmDelete" class="delete">حذف هذا السطر</button>
+    </div>
+
+    <script>
+        // --- المتغيرات العامة ---
+        const videoPlayer = document.getElementById('videoPlayer');
+        const videoFileInput = document.getElementById('videoFile');
+        const srtFileInput = document.getElementById('srtFile');
+        const subtitleEditor = document.getElementById('subtitleEditor');
+        const exportSrtButton = document.getElementById('exportSrtButton');
+        const seekBackwardButton = document.getElementById('seekBackward');
+        const seekForwardButton = document.getElementById('seekForward');
+        const contextMenu = document.getElementById('contextMenu');
+        const cmAddAbove = document.getElementById('cmAddAbove');
+        const cmAddBelow = document.getElementById('cmAddBelow');
+        const cmDelete = document.getElementById('cmDelete');
+
+        let subtitles = [];
+        let currentSubtitleIndex = -1; // مؤشر السطر النشط في قائمة المحرر
+        let originalFileName = 'edited_subtitles';
+        let longPressTimer = null;
+        const LONG_PRESS_DURATION = 700; // ms
+        let contextTargetIndex = -1;
+        let currentTrackUrl = null; // لتخزين رابط الـ Blob الحالي لتنظيفه لاحقًا
+
+        // --- تهيئة الأزرار والحالة ---
+        function updateMediaControlsState() { /* ... كما هي ... */
+             const canControl = videoPlayer.readyState > 0; seekBackwardButton.disabled = !canControl; seekForwardButton.disabled = !canControl;
+        }
+         function checkEnableExport() { /* ... كما هي ... */
+             exportSrtButton.disabled = subtitles.length === 0;
+         }
+        updateMediaControlsState(); checkEnableExport();
+
+        // --- تحميل ومعالجة الملفات ---
+        videoFileInput.addEventListener('change', (event) => { /* ... كما هي ... */
+             const file = event.target.files[0]; if (!file) return; const fileURL = URL.createObjectURL(file); videoPlayer.src = fileURL; let videoName = file.name.substring(0, file.name.lastIndexOf('.')) || 'video'; originalFileName = `${videoName}_edited`; videoPlayer.onloadedmetadata = updateMediaControlsState; videoPlayer.oncanplay = updateMediaControlsState; updateMediaControlsState();
+        });
+        srtFileInput.addEventListener('change', (event) => { /* ... كما هي مع تعديل طفيف لاستدعاء updateVideoTrack ... */
+             const file = event.target.files[0]; if (!file) return; const reader = new FileReader();
+             reader.onload = (e) => {
+                 const srtContent = e.target.result; try { subtitles = parseSRT(srtContent); if (subtitles.length === 0 && srtContent.trim() !== '') { /* ... تحذير ... */ } else { renderSubtitles(); /* *** تحديث التراك عند التحميل *** */ updateVideoTrack(); } } catch (error) { /* ... معالجة الخطأ ... */ subtitles = []; } checkEnableExport();
+             };
+             reader.onerror = () => { /* ... معالجة الخطأ ... */ subtitles = []; checkEnableExport(); }; reader.readAsText(file);
+        });
+
+        // --- دوال تحليل وتحويل الوقت (SRT) ---
+        function parseSRT(data) { /* ... كما هي ... */
+             data = data.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim(); const pattern = /(\d+)\s*?\n(\d{2}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,.]\d{3})\s*([\s\S]*?)(?=\n\n\d+\s*?\n|\n*$)/g; let match; const subs = []; let lastIndex = 0; while ((match = pattern.exec(data)) !== null) { if (match.index > lastIndex) { const missedContent = data.substring(lastIndex, match.index).trim(); if (missedContent) console.warn("Skipping malformed:", missedContent); } try { subs.push({ id: parseInt(match[1]), startTime: timeToSeconds(match[2]), endTime: timeToSeconds(match[3]), text: match[4].trim() }); } catch (e) { console.warn(`Skipping invalid time entry near index ${match[1]}: ${e.message}`) } lastIndex = pattern.lastIndex; } if (subs.length === 0 && data.length > 10) console.warn("SRT parsing resulted in 0 subtitles."); return subs;
+        }
+        function timeToSeconds(timeString) { /* ... كما هي ... */
+             try { const parts = timeString.split(':'); const secondsParts = parts[2].replace(',', '.').split('.'); const hours = parseInt(parts[0]); const minutes = parseInt(parts[1]); const seconds = parseInt(secondsParts[0]); const milliseconds = parseInt(secondsParts[1]?.padEnd(3, '0').substring(0,3) || '0'); if (isNaN(hours) || isNaN(minutes) || isNaN(seconds) || isNaN(milliseconds)) throw new Error(); return hours * 3600 + minutes * 60 + seconds + milliseconds / 1000; } catch { throw new Error(`Invalid time format: "${timeString}"`); }
+        }
+        function secondsToTime(totalSeconds) { /* ... SRT format (comma) - كما هي ... */
+              if (isNaN(totalSeconds) || totalSeconds < 0) return "00:00:00,000"; totalSeconds = Math.max(0, totalSeconds); const hours = Math.floor(totalSeconds / 3600); const minutes = Math.floor((totalSeconds % 3600) / 60); const seconds = Math.floor(totalSeconds % 60); const milliseconds = Math.round((totalSeconds % 1) * 1000); return `${pad(hours)}:${pad(minutes)}:${pad(seconds)},${pad(milliseconds, 3)}`;
+        }
+        function pad(num, size = 2) { /* ... كما هي ... */
+            let s = String(num); while (s.length < size) s = "0" + s; if (s.length > size && size === 3) s = s.substring(0, 3); return s;
+        }
+
+        // *** دالة جديدة لتحويل الوقت إلى صيغة WebVTT (نقطة بدل فاصلة) ***
+        function secondsToTimeWebVTT(totalSeconds) {
+             if (isNaN(totalSeconds) || totalSeconds < 0) return "00:00:00.000";
+             totalSeconds = Math.max(0, totalSeconds);
+             const hours = Math.floor(totalSeconds / 3600);
+             const minutes = Math.floor((totalSeconds % 3600) / 60);
+             const seconds = Math.floor(totalSeconds % 60);
+             const milliseconds = Math.round((totalSeconds % 1) * 1000);
+             return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}.${pad(milliseconds, 3)}`; // نقطة للـ VTT
+        }
+
+        // --- *** دوال إنشاء وتحديث تراك WebVTT لعرض الترجمة على الفيديو *** ---
+        function generateWebVTT(subs) {
+            let vttContent = "WEBVTT\n\n"; // Header required for VTT
+            subs.forEach((sub, index) => {
+                // Basic validation before adding to VTT
+                if (sub.endTime > sub.startTime && sub.text.trim()) {
+                     vttContent += `${index + 1}\n`; // Optional: Add cue identifier
+                     vttContent += `${secondsToTimeWebVTT(sub.startTime)} --> ${secondsToTimeWebVTT(sub.endTime)}\n`;
+                     vttContent += `${sub.text.trim()}\n\n`;
+                } else {
+                    console.warn(`Skipping invalid subtitle for VTT generation: Index ${index}, Start ${sub.startTime}, End ${sub.endTime}`);
+                }
+            });
+            return vttContent;
+        }
+
+        function updateVideoTrack() {
+             if (subtitles.length === 0 && !currentTrackUrl) return; // لا تفعل شيئًا إذا لا يوجد ترجمة ولا تراك حالي
+
+            // 1. تنظيف التراك القديم ورابطه
+            const oldTrack = videoPlayer.querySelector('track');
+            if (oldTrack) {
+                oldTrack.remove();
+            }
+            if (currentTrackUrl) {
+                URL.revokeObjectURL(currentTrackUrl); // تحرير الذاكرة
+                currentTrackUrl = null;
+            }
+             // إيقاف عرض الترجمة إذا تم حذف كل الترجمات
+             if (subtitles.length === 0) {
+                 // Ensure TextTrackList is updated
+                 if (videoPlayer.textTracks.length > 0) {
+                     videoPlayer.textTracks[0].mode = 'disabled';
+                 }
+                 return;
+             }
+
+            // 2. إنشاء محتوى WebVTT
+            const vttContent = generateWebVTT(subtitles);
+            if (!vttContent.includes("-->")) { // تأكد من وجود ترجمة صالحة
+                console.warn("No valid subtitles to generate VTT track.");
+                return;
+            }
+
+
+            // 3. إنشاء Blob و URL
+            const blob = new Blob([vttContent], { type: 'text/vtt;charset=utf-8' });
+            currentTrackUrl = URL.createObjectURL(blob);
+
+            // 4. إنشاء عنصر <track> جديد وإضافته
+            const trackElement = document.createElement('track');
+            trackElement.kind = 'subtitles';
+            trackElement.label = 'العربية'; // أو أي لغة مناسبة
+            trackElement.srclang = 'ar';
+            trackElement.src = currentTrackUrl;
+            trackElement.default = true; // اجعله التراك الافتراضي
+            videoPlayer.appendChild(trackElement);
+
+            // 5. تفعيل التراك (قد يحتاج لبعض الوقت ليعمل المتصفح)
+            // التأكد من أن TextTrackList موجودة قبل محاولة تعيين الوضع
+            setTimeout(() => {
+                 if (videoPlayer.textTracks && videoPlayer.textTracks.length > 0) {
+                     // ابحث عن التراك الصحيح (عادة الأول إذا كان هو الوحيد)
+                      for (let i = 0; i < videoPlayer.textTracks.length; i++) {
+                          if (videoPlayer.textTracks[i].kind === 'subtitles') {
+                               videoPlayer.textTracks[i].mode = 'showing';
+                               break; // أوقف البحث بعد العثور على أول تراك ترجمة
+                          }
+                      }
+                 } else {
+                     console.warn("Text tracks not available yet to set mode.");
+                 }
+            }, 100); // تأخير بسيط للسماح للمتصفح بمعالجة التراك
+        }
+
+
+        // --- عرض الترجمة في المحرر (Editor List) ---
+        function renderSubtitles() {
+            subtitleEditor.innerHTML = '';
+            if (subtitles.length === 0) { /* ... رسالة فارغة ... */ return; }
+
+            // فرز الترجمة دائما قبل العرض
+            subtitles.sort((a, b) => a.startTime - b.startTime);
+
+            subtitles.forEach((sub, index) => {
+                const item = document.createElement('div');
+                item.classList.add('subtitle-item');
+                item.dataset.index = index;
+
+                // -- عناصر التحكم بالوقت والنص (كما هي مع منع الانتشار) --
+                const timeControls = document.createElement('div'); timeControls.classList.add('time-controls'); /* ... إضافة العناصر والأزرار ... */
+                const startTimeInput = document.createElement('input'); startTimeInput.type = 'text'; startTimeInput.value = secondsToTime(sub.startTime); startTimeInput.title = `وقت البدء`; startTimeInput.dataset.type = 'start'; startTimeInput.addEventListener('change', (e) => handleTimeInputChange(e, index, 'startTime'));
+                const setStartBtn = document.createElement('button'); setStartBtn.textContent = '↦ ابدأ'; setStartBtn.title = 'ضبط وقت البدء للوقت الحالي'; setStartBtn.addEventListener('click', (e) => { e.stopPropagation(); setTimeFromVideo(index, 'startTime'); });
+                const endTimeInput = document.createElement('input'); endTimeInput.type = 'text'; endTimeInput.value = secondsToTime(sub.endTime); endTimeInput.title = `وقت الانتهاء`; endTimeInput.dataset.type = 'end'; endTimeInput.addEventListener('change', (e) => handleTimeInputChange(e, index, 'endTime'));
+                const setEndBtn = document.createElement('button'); setEndBtn.textContent = 'انتهاء ↦'; setEndBtn.title = 'ضبط وقت الانتهاء للوقت الحالي'; setEndBtn.addEventListener('click', (e) => { e.stopPropagation(); setTimeFromVideo(index, 'endTime'); });
+                const timeSeparator = document.createElement('span'); timeSeparator.classList.add('time-separator'); timeSeparator.textContent = '-->';
+                timeControls.appendChild(setStartBtn); timeControls.appendChild(startTimeInput); timeControls.appendChild(timeSeparator); timeControls.appendChild(endTimeInput); timeControls.appendChild(setEndBtn);
+
+                const textArea = document.createElement('textarea'); textArea.value = sub.text; textArea.rows = Math.max(2, sub.text.split('\n').length); textArea.dir = "auto";
+                 // *** تحديث التراك عند تغيير النص (يمكن إضافة debounce هنا للأداء) ***
+                textArea.addEventListener('input', (e) => {
+                     subtitles[index].text = e.target.value;
+                     updateVideoTrack(); // تحديث الترجمة المعروضة على الفيديو
+                });
+                textArea.addEventListener('click', (e) => e.stopPropagation());
+                textArea.addEventListener('contextmenu', (e) => e.stopPropagation());
+                textArea.addEventListener('touchstart', (e) => e.stopPropagation()); // منع بدء اللمس على النص
+
+                item.appendChild(timeControls);
+                item.appendChild(textArea);
+
+                // --- مستمعات الأحداث الجديدة (النقر وقائمة السياق) ---
+                item.addEventListener('click', () => { /* ... انتقال الفيديو كما هو ... */ if (videoPlayer.readyState >= 1) videoPlayer.currentTime = sub.startTime; });
+
+                // قائمة السياق (الضغط بالزر الأيمن - Desktop)
+                item.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    showContextMenu(index, item); // تمرير العنصر نفسه
+                });
+
+                // قائمة السياق (الضغط المطول - Mobile)
+                item.addEventListener('touchstart', (e) => {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = setTimeout(() => {
+                        // لا حاجة لـ preventDefault هنا بالضرورة إلا إذا أردت منع سلوكيات أخرى
+                        showContextMenu(index, item); // تمرير العنصر نفسه
+                    }, LONG_PRESS_DURATION);
+                });
+                item.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+                item.addEventListener('touchend', () => clearTimeout(longPressTimer));
+                item.addEventListener('touchcancel', () => clearTimeout(longPressTimer));
+
+                subtitleEditor.appendChild(item);
+            });
+
+             // *** تحديث تراك الفيديو بعد إعادة العرض الكامل للقائمة ***
+             updateVideoTrack();
+             // إعادة تفعيل التمييز
+             updateHighlight(true);
+        }
+
+
+        // --- مزامنة تمييز القائمة (وليس تراك الفيديو) ---
+        function updateHighlight(forceScroll = false) { /* ... كما هي ... */
+             if (subtitles.length === 0) return; const currentTime = videoPlayer.currentTime; let newActiveIndex = -1; for (let i = 0; i < subtitles.length; i++) { if (currentTime >= subtitles[i].startTime && currentTime < subtitles[i].endTime) { newActiveIndex = i; break; } } if (newActiveIndex !== currentSubtitleIndex) { const previousItem = subtitleEditor.querySelector(`.subtitle-item.active`); if (previousItem) previousItem.classList.remove('active'); if (newActiveIndex !== -1) { const currentItem = subtitleEditor.querySelector(`.subtitle-item[data-index="${newActiveIndex}"]`); if (currentItem) { currentItem.classList.add('active'); if (forceScroll || !isElementInViewport(currentItem, subtitleEditor)) { currentItem.scrollIntoView({ behavior: 'smooth', block: 'center' }); } } } currentSubtitleIndex = newActiveIndex; }
+        }
+        videoPlayer.addEventListener('timeupdate', () => updateHighlight(false));
+        function isElementInViewport (el, scrollParent) { /* ... كما هي ... */
+             if (!el) return false; const rect = el.getBoundingClientRect(); const parentRect = scrollParent ? scrollParent.getBoundingClientRect() : { top: 0, bottom: window.innerHeight }; return rect.top >= parentRect.top && rect.bottom <= parentRect.bottom;
+        }
+
+        // --- دوال تعديل الوقت (مع تحديث التراك) ---
+        function handleTimeInputChange(event, index, timeType) { /* ... كما هي مع إضافة updateVideoTrack ... */
+            const inputElement = event.target; const newTimeString = inputElement.value.trim(); inputElement.classList.remove('error'); try { const newSeconds = timeToSeconds(newTimeString); /* ... باقي التحقق ... */ subtitles[index][timeType] = newSeconds; inputElement.value = secondsToTime(newSeconds); updateVideoTrack(); /* *** تحديث التراك بعد تغيير الوقت *** */ } catch (error) { /* ... معالجة الخطأ ... */ }
+        }
+        function setTimeFromVideo(index, timeType) { /* ... كما هي مع إضافة updateVideoTrack ... */
+             /* ... التحقق من الفيديو والوقت ... */ subtitles[index][timeType] = videoPlayer.currentTime; if (inputElement) inputElement.value = secondsToTime(videoPlayer.currentTime); updateVideoTrack(); /* *** تحديث التراك بعد تغيير الوقت *** */
+        }
+
+        // --- أزرار تقديم وترجيع الفيديو ---
+        seekBackwardButton.addEventListener('click', () => { /* ... كما هي ... */ if (videoPlayer.readyState > 0) videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 5); });
+        seekForwardButton.addEventListener('click', () => { /* ... كما هي ... */ if (videoPlayer.readyState > 0 && videoPlayer.duration) videoPlayer.currentTime = Math.min(videoPlayer.duration, videoPlayer.currentTime + 5); });
+        videoPlayer.addEventListener('play', updateMediaControlsState); videoPlayer.addEventListener('pause', updateMediaControlsState); videoPlayer.addEventListener('ended', updateMediaControlsState);
+
+
+        // --- *** دوال قائمة السياق (معدلة) *** ---
+        function showContextMenu(index, itemElement) {
+             // 1. إزالة التحديد القديم وإخفاء القائمة القديمة (إذا كانت مفتوحة)
+             hideContextMenu();
+
+             // 2. تخزين المؤشر وتطبيق التحديد الجديد
+            contextTargetIndex = index;
+            itemElement.classList.add('context-selected');
+
+            // 3. حساب موضع القائمة نسبةً للعنصر
+            const itemRect = itemElement.getBoundingClientRect();
+            const menuHeight = contextMenu.offsetHeight || 120; // تقدير الارتفاع إذا لم يكن مرئيًا بعد
+            const menuWidth = contextMenu.offsetWidth || 150; // تقدير العرض
+            const spaceBelow = window.innerHeight - itemRect.bottom;
+            const spaceAbove = itemRect.top;
+
+            let top, left;
+
+             // تحديد الموضع الرأسي (أسفل العنصر افتراضيًا، أو أعلاه إذا لم تكن هناك مساحة كافية)
+            if (spaceBelow >= menuHeight + 10) { // 10px هامش
+                top = itemRect.bottom + window.scrollY + 5; // 5px مسافة من العنصر
+            } else if (spaceAbove >= menuHeight + 10) {
+                top = itemRect.top + window.scrollY - menuHeight - 5;
+            } else {
+                 // إذا لم تكن هناك مساحة كافية في الأعلى أو الأسفل، ضعها في أقرب مكان ممكن
+                 top = Math.max(5 + window.scrollY, window.innerHeight + window.scrollY - menuHeight - 5);
+            }
+
+             // تحديد الموضع الأفقي (محاذاة لليمين أو اليسار بناءً على اتجاه الصفحة)
+             // لـ RTL، نحاول المحاذاة لليسار
+             left = itemRect.left + window.scrollX;
+
+            // التأكد من عدم خروج القائمة من الجانب الأيسر أو الأيمن
+            if (left < 5) left = 5;
+            if (left + menuWidth > window.innerWidth - 5) {
+                left = window.innerWidth - menuWidth - 5;
+            }
+
+
+            contextMenu.style.top = `${top}px`;
+            contextMenu.style.left = `${left}px`;
+            contextMenu.style.display = 'block';
+        }
+
+        function hideContextMenu() {
+            // إزالة التحديد البصري من أي عنصر
+             const selectedItem = subtitleEditor.querySelector('.subtitle-item.context-selected');
+             if (selectedItem) {
+                 selectedItem.classList.remove('context-selected');
+             }
+             // إخفاء القائمة وإعادة تعيين المؤشر
+            if (contextMenu.style.display === 'block') {
+                contextMenu.style.display = 'none';
+            }
+            contextTargetIndex = -1;
+        }
+
+        // إغلاق القائمة عند النقر خارجها أو التمرير
+        document.addEventListener('click', (e) => { if (!contextMenu.contains(e.target)) hideContextMenu(); });
+        window.addEventListener('scroll', hideContextMenu, true);
+
+        // مستمعات أزرار القائمة (تستدعي الدوال المناسبة ثم تخفي القائمة)
+        cmAddAbove.addEventListener('click', () => { if (contextTargetIndex !== -1) addSubtitle(contextTargetIndex, 'above'); hideContextMenu(); });
+        cmAddBelow.addEventListener('click', () => { if (contextTargetIndex !== -1) addSubtitle(contextTargetIndex, 'below'); hideContextMenu(); });
+        cmDelete.addEventListener('click', () => { if (contextTargetIndex !== -1) deleteSubtitle(contextTargetIndex); hideContextMenu(); });
+
+
+        // --- دوال إضافة وحذف الترجمة (تستدعي renderSubtitles التي بدورها تحدث التراك) ---
+        function addSubtitle(index, position) { /* ... نفس منطق الحساب السابق ... */
+             const DEFAULT_DURATION = 2; let newStartTime, newEndTime; const refSub = subtitles[index];
+             if (position === 'above') { const prevEndTime = (index > 0) ? subtitles[index - 1].endTime : 0; newStartTime = Math.max(prevEndTime, refSub.startTime - DEFAULT_DURATION - 0.5); newEndTime = Math.min(refSub.startTime - 0.05, newStartTime + DEFAULT_DURATION); if (newEndTime <= newStartTime) newEndTime = newStartTime + DEFAULT_DURATION; newStartTime = Math.max(prevEndTime + 0.01, newStartTime); newEndTime = Math.max(newStartTime + 0.1, newEndTime); }
+             else { const nextStartTime = (index < subtitles.length - 1) ? subtitles[index + 1].startTime : (videoPlayer.duration || refSub.endTime + 10); newStartTime = Math.max(refSub.endTime + 0.05, refSub.endTime); newEndTime = Math.min(newStartTime + DEFAULT_DURATION, nextStartTime - 0.05); if (newEndTime <= newStartTime) newEndTime = newStartTime + DEFAULT_DURATION; newEndTime = Math.min(nextStartTime - 0.01, newEndTime); newEndTime = Math.max(newStartTime + 0.1, newEndTime); }
+             const newSub = { id: -1, startTime: Math.max(0, newStartTime), endTime: Math.max(0, newEndTime), text: "نص جديد..." };
+             const insertIndex = (position === 'above') ? index : index + 1; subtitles.splice(insertIndex, 0, newSub);
+             renderSubtitles(); // إعادة العرض ستحدث التراك أيضًا
+             checkEnableExport();
+             // التمرير والتركيز على العنصر الجديد
+             const newItem = subtitleEditor.querySelector(`.subtitle-item[data-index="${insertIndex}"]`); if (newItem) { newItem.scrollIntoView({ behavior: 'smooth', block: 'center' }); newItem.querySelector('textarea')?.focus(); }
+        }
+        function deleteSubtitle(index) { /* ... نفس المنطق السابق ... */
+             if (index < 0 || index >= subtitles.length) return; if (!confirm(`هل أنت متأكد من حذف هذا السطر؟\n"${subtitles[index].text.substring(0, 50)}..."`)) return; subtitles.splice(index, 1);
+             renderSubtitles(); // إعادة العرض ستحدث التراك أيضًا
+             checkEnableExport();
+        }
+
+        // --- تصدير ملف SRT ---
+        exportSrtButton.addEventListener('click', () => { /* ... كما هو ... */
+             if (subtitles.length === 0) { alert('لا يوجد ترجمة لتصديرها!'); return; } subtitles.sort((a, b) => a.startTime - b.startTime); let srtOutput = ''; subtitles.forEach((sub, index) => { if (sub.endTime <= sub.startTime) { console.error(`Invalid timing for line ${index + 1}`); alert(`تحذير: توقيت غير صالح للسطر ${index + 1}`); } srtOutput += (index + 1) + '\n'; srtOutput += `${secondsToTime(sub.startTime)} --> ${secondsToTime(sub.endTime)}\n`; srtOutput += sub.text.trim() + '\n\n'; }); const blob = new Blob([srtOutput], { type: 'text/srt;charset=utf-8;' }); const link = document.createElement('a'); const url = URL.createObjectURL(blob); link.setAttribute('href', url); link.setAttribute('download', `${originalFileName}.srt`); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+        });
+
+    </script>
+
+</body>
+</html>
